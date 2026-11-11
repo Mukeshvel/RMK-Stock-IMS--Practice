@@ -1,0 +1,999 @@
+  import React, { useState, useRef, useEffect } from 'react';
+  import styled from 'styled-components';
+  import dayjs from 'dayjs';
+  import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
+  import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+  import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+  import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+  import axios from 'axios';
+  import { ToastContainer, toast } from 'react-toastify';
+  import 'react-toastify/dist/ReactToastify.css';
+  import { HashLoader } from 'react-spinners'; 
+  import { Autocomplete, TextField } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button
+} from '@mui/material';
+  const Container = styled.div`
+    h1 {
+      color: #164863;
+      text-align: center;
+    }
+  `;
+
+  const FormContainer = styled.div`
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 450px;
+  `;
+
+  const Records = styled.div`
+    display: flex;
+    flex-direction: column;
+
+    label {
+      margin-left: 12px;
+    }
+  `;
+
+  const InputNumber = styled.input`
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f4f4f4;
+    margin-left: 10px;
+    margin-top: 24px;
+    width: 190px;
+  `;
+
+  const AddButton = styled.button`
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #3582ab;;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 24px;
+    margin-left: 10px;
+
+    &:hover {
+      background-color: #0a3d62;
+    }
+  `;
+
+  const ItemTable = styled.table`
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    th {
+      background-color: #3582ab;;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    tbody tr {
+      background-color: #f9f9f9;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #f1f1f1;
+    }
+
+    tbody tr:hover {
+      background-color: #e0f7fa;
+      color: #000;
+    }
+
+    td input {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 14px;
+      width:114px;
+    }
+
+    td input:focus {
+      outline: 2px solid #164863;
+    }
+
+    td select {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 14px;
+      width: 180px;
+    }
+
+    .sno {
+      min-width: 50px;
+    }
+
+    .category{
+      min-width:115px;
+      max-width:115px;
+    }
+  `;
+
+  const SubmitContainer = styled.div`
+    margin-top: 20px;
+    text-align: center;
+
+    .add-button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      background-color: #3582ab;;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      margin-right: 10px;
+
+      &:hover {
+        background-color: #0a3d62;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  `;
+
+  const SubmitButton = styled.button`
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+
+    &:hover {
+      background-color: #45a049;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  `;
+  const DeleteButton = styled.button`
+    background-color: #d9534f; /* Bootstrap danger color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: #c9302c; /* Darker shade on hover */
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    &:disabled {
+      background-color: #e7e7e7; /* Light gray for disabled */
+      color: #a9a9a9; /* Darker gray for text */
+      cursor: not-allowed;
+    }
+  `;
+
+  const ChargeSummary = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+    overflow: hidden;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 9px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .charge-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 200px);
+      gap: 20px;
+      align-items: center;
+    }
+
+    .other-charge-row {
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 200px) auto;
+    }
+
+    .summary-label, .charge-row label {
+      color: #164863;
+      font-weight: 600;
+    }
+
+    .summary-value {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .grand-total-row {
+      border-top: 1px solid #ddd;
+      padding-top: 16px;
+    }
+
+    .grand-total {
+      color: #164863;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .grand-total-value {
+      text-align: right;
+      color: #164863;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .grand-total-input {
+      color: #164863;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .add-charge-button {
+      align-self: flex-start;
+    }
+
+    @media (max-width: 520px) {
+      .charge-row, .other-charge-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .summary-value, .grand-total-value {
+        text-align: left;
+      }
+    }
+  `;
+  const Purchase = () => {
+    const [rows, setRows] = useState([
+      {
+        id: 1,
+        sno: 1,
+        item_id: null,
+        item_name: '',
+        itemOptions: [],
+        quantity: '',
+        rate: '',
+        amount: '',
+        invoice: '',
+        shop: null
+        // add other fields as needed
+      }
+    ]);
+    const numRecordsRef = useRef(null);
+    const [date, setDate] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [subcategories, setSubcategories] = useState([]);
+    const [shopAddresses, setShopAddresses] = useState([]);
+    const [selectedId, setSelectedId] = useState(() => {
+      return localStorage.getItem('locationid') || '';
+    });
+    const [locations, setLocations] = useState([]);
+    const [invoice, setInvoice] = useState('');
+    const [shop, setShop] = useState(null);
+    useEffect(() => {
+      const stored = sessionStorage.getItem('userlocations');
+      if (stored) {
+        try {
+          setLocations(JSON.parse(stored));
+        } catch (err) {
+          console.error('Invalid JSON in sessionStorage for userlocations:', err);
+        }
+      }
+    }, []);
+    const selectedLocationName = locations.find(loc => loc.location_id == selectedId)?.location_name || '';
+
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [submitData, setSubmitData] = useState(null); // temp store data before actual submission
+    const [showShopConfirmDialog, setShowShopConfirmDialog] = useState(false);
+    const [pendingShop, setPendingShop] = useState(null);
+    const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+    const [showChargesDialog, setShowChargesDialog] = useState(false);
+    const [charges, setCharges] = useState({
+      sgst: '',
+      cgst: '',
+      freight: '',
+      otherCharges: [],
+      grandTotal: ''
+    });
+    const [isGrandTotalEditing, setIsGrandTotalEditing] = useState(false);
+
+    const lineSubtotal = rows.reduce((total, row) => total + (Number(row.amount) || 0), 0);
+    const chargesTotal =
+      (Number(charges.sgst) || 0) +
+      (Number(charges.cgst) || 0) +
+      (Number(charges.freight) || 0) +
+      charges.otherCharges.reduce((total, charge) => total + (Number(charge.amount) || 0), 0);
+    const calculatedGrandTotal = lineSubtotal + chargesTotal;
+    const grandTotal = charges.grandTotal === ''
+      ? calculatedGrandTotal
+      : Number(charges.grandTotal) || 0;
+
+    const startGrandTotalEditing = () => setIsGrandTotalEditing(true);
+
+    // useEffect(() => {
+      //   const fetchItems = async () => {
+    //     try {
+    //       console.log("Fetching items...");
+    //       const response = await axios.get(`${import.meta.env.VITE_RMK_MESS_URL}/purchase/getItems`);
+    //       console.log("Items fetched:", response.data);
+    //       setItems(response.data);
+    //     } catch (error) {
+    //       console.error("Error fetching items:", error);
+    //     }
+    //   };
+    //   fetchItems();
+    // }, []);
+
+ const handleValidateAndConfirm = () => {
+    if (!date) {
+      toast.error("Please enter the date.");
+      return;
+    }
+    if (!invoice) {
+      toast.error("Please enter the invoice.");
+      return;
+    }
+    if (!shop) {
+      toast.error("Please select the shop.");
+      return;
+    }
+
+    const invalidRows = rows.filter(row =>
+      !row.item_id || !row.quantity || row.rate === ''
+    );
+
+    if (invalidRows.length > 0) {
+      toast.error("Please fill in all the fields for each row.");
+      return;
+    }
+
+    const formattedDate = date.format('YYYY-MM-DD');
+    const locationId = parseInt(localStorage.getItem('locationid'), 10);
+
+    const updatedRows = rows.map(row => ({
+      item_id: row.item_id,
+      quantity: row.quantity,
+      rate: row.rate,
+      amount: Number(row.quantity) * Number(row.rate),
+      invoice: invoice,
+      shop_id: shop.value
+    }));
+
+    setSubmitData({ date: formattedDate, rows: updatedRows, location: locationId });
+    setShowSubmitDialog(true);
+  };
+
+const confirmSubmit = async () => {
+  if (!submitData) return;
+
+  try {
+    setLoading(true);
+    const response = await axios.post(`${import.meta.env.VITE_RMK_MESS_URL}/purchase/add`, {
+      date: submitData.date,
+      arr: submitData.rows,
+      location: submitData.location,
+      charges
+    });
+
+    toast.success("Items added successfully");
+
+    // Reset
+    setRows([
+      {
+        id: Date.now(),
+        sno: 1,
+        item_id: null,
+        item_name: '',
+        itemOptions: [],
+        quantity: '',
+        rate: '',
+        amount: '',
+        invoice: '',
+        shop: null
+      }
+    ]);
+    setDate(null);
+    numRecordsRef.current.value = '';
+    setSubmitData(null);
+    setCharges({ sgst: '', cgst: '', freight: '', otherCharges: [], grandTotal: '' });
+    setIsGrandTotalEditing(false);
+    setShowConfirmDialog(false);
+    setShowChargesDialog(false);
+
+  } catch (error) {
+    console.error("Error submitting data:", error);
+    toast.error("Error submitting data");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  useEffect(() => {
+  setShowConfirmDialog(true);
+}, []);
+
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_RMK_MESS_URL}/purchase/subcategories`);
+        // remove duplicates & empty:
+        const subs = Array.from(new Set(
+          response.data
+            .map(item => item.sub_category)
+            .filter(s => s && s.trim() !== '')
+        ));
+        setSubcategories(subs);
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+      }
+    };
+    fetchSubcategories();
+  }, []);
+
+  useEffect(() => {
+  const fetchShops = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_RMK_MESS_URL}/shops/`);
+      const shops = response.data.map(shop => ({
+        label: shop.name,
+        value: shop.id
+      }));
+      setShopAddresses(shops);
+    } catch (error) {
+      console.error("Error fetching shop addresses:", error);
+    }
+  };
+  fetchShops();
+}, []);
+
+
+
+    const handleDeleteRow = (id) => {
+      setRows(prevRows => prevRows.filter(row => row.id !== id));
+    };
+    const fetchItemsBySubcategory = async (subcategory, rowId) => {
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_RMK_MESS_URL}/purchase/getItemsBySubcategory`, {
+          params: { subcategory }
+        });
+    const options = response.data.map(item => ({
+      label: item.item_name,
+      value: item.item_id
+    }));
+    setRows(prevRows =>
+      prevRows.map(row =>
+        row.id === rowId ? { ...row, itemOptions: options } : row
+      )
+    );
+  } catch (error) {
+    console.error("Failed to fetch items", error);
+  }
+};
+
+    const handleAddRows = () => {
+      const numberOfRows = parseInt(numRecordsRef.current.value, 10);
+      if (numberOfRows > 0) {
+        const lastSno = rows.length > 0 ? rows[rows.length - 1].sno : 0;
+        const newRows = Array.from({ length: numberOfRows }, (_, index) => ({
+            id: Date.now() + index,
+            sno: lastSno + index + 1,
+            item_id: null,
+            item_name: '',
+            itemOptions: [],
+            quantity: '',
+            rate: '',
+            amount: '',
+            invoice: '',
+            shop: null
+          }));
+
+        setRows(prevRows => [...prevRows, ...newRows]);
+        numRecordsRef.current.value = '';
+      }
+    };
+
+    const handleInputChange = (rowId, field, value) => {
+  setRows(prevRows =>
+    prevRows.map(row => {
+      if (row.id !== rowId) return row;
+      const updatedRow = { ...row, [field]: value };
+      if (field === 'quantity' || field === 'rate') {
+        updatedRow.amount = String((Number(updatedRow.quantity) || 0) * (Number(updatedRow.rate) || 0));
+      }
+      return updatedRow;
+    })
+  );
+
+  if (field === 'category') {
+    fetchItemsBySubcategory(value, rowId);
+  }
+};
+
+
+    const handleAddOneRow = () => {
+      const lastSno = rows.length > 0 ? rows[rows.length - 1].sno : 0;
+      setRows(prevRows => [
+        ...prevRows,
+        {
+          id: Date.now(),
+          sno: lastSno + 1,
+          item_id: null,
+          item_name: '',
+          itemOptions: [],
+          quantity: '',
+          rate: '',
+          amount: '',
+          invoice: '',
+          shop: null
+        }
+      ]);
+
+    };
+
+    function addMonthsToDate(dateString, months) {
+      let date = new Date(dateString);
+    
+      date.setMonth(date.getMonth() + months);
+    
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); 
+      const day = String(date.getDate()).padStart(2, '0');
+    
+      return `${year}-${month}-${day}`;
+    }
+
+      return (
+    <Container>
+      <h1>PURCHASE</h1>
+      <FormContainer>
+        {loading && (
+          <div style={{
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          }}>
+            <HashLoader color="#164863" loading={loading} size={90} />
+          </div>
+        )}
+
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DemoContainer components={['DatePicker']}>
+            <DatePicker
+              label=""
+              className="date-picker"
+              shouldDisableDate={(date) => date.isAfter(dayjs())}
+              onChange={(newDate) => setDate(newDate)}
+              value={date}
+              format="YYYY-MM-DD"
+            />
+          </DemoContainer>
+        </LocalizationProvider>
+
+        <TextField
+          label="Invoice"
+          variant="outlined"
+          size="small"
+          value={invoice}
+          onChange={(e) => setInvoice(e.target.value)}
+          sx={{ width: 180, marginLeft: 2 }}
+        />
+
+        <Autocomplete
+          options={shopAddresses}
+          getOptionLabel={(option) => option?.label || ''}
+          value={shop}
+          onChange={(_, newValue) => {
+            if (newValue) {
+              setPendingShop(newValue);
+              setShowShopConfirmDialog(true);
+            } else {
+              setShop(null);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="Shop Name" variant="outlined" size="small" />
+          )}
+          sx={{ width: 180, marginLeft: 2 }}
+        />
+
+        <Records>
+          <InputNumber
+            type='number'
+            id='num-records'
+            placeholder='No of rows to be added'
+            ref={numRecordsRef}
+          />
+        </Records>
+        <AddButton onClick={handleAddRows}>Add</AddButton>
+      </FormContainer>
+
+      <ItemTable>
+        <thead>
+          <tr>
+            <th>SNo</th>
+            <th>Category</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            {/* <th>Manufacture</th>
+            <th>Use Before</th> */}
+            <th>Rate</th>
+            <th>Amount</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.id}>
+              <td className="sno">{row.sno}</td>
+
+              <td>
+                <Autocomplete
+                  freeSolo
+                  options={subcategories}
+                  value={row.category}
+                  onChange={(e, newValue) =>
+                    handleInputChange(row.id, 'category', newValue || '')
+                  }
+                  onInputChange={(e, newInputValue) =>
+                    handleInputChange(row.id, 'category', newInputValue)
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Subcategory"
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
+                  sx={{ width: 150 }}
+                />
+              </td>
+
+              <td>
+                <Autocomplete
+                  options={row.itemOptions}
+                  getOptionLabel={(option) => option.label}
+                  isOptionEqualToValue={(opt, val) => opt.value === val.value}
+                  value={
+                    row.item_id != null
+                      ? { label: row.item_name, value: row.item_id }
+                      : null
+                  }
+                  onChange={(_, selected) => {
+                    if (selected) {
+                      handleInputChange(row.id, 'item_id', selected.value);
+                      handleInputChange(row.id, 'item_name', selected.label);
+                    } else {
+                      handleInputChange(row.id, 'item_id', null);
+                      handleInputChange(row.id, 'item_name', '');
+                    }
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Item" variant="outlined" size="small" />
+                  )}
+                  sx={{ width: 180 }}
+                />
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  value={row.quantity}
+                  onChange={(e) => handleInputChange(row.id, 'quantity', e.target.value)}
+                  required
+                />
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={row.rate}
+                  onChange={(e) => handleInputChange(row.id, 'rate', e.target.value)}
+                  required
+                />
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={row.amount}
+                  readOnly
+                  required
+                  aria-label="Amount"
+                />
+              </td>
+
+              <td>
+                <DeleteButton onClick={() => handleDeleteRow(row.id)}>Delete</DeleteButton>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </ItemTable>
+
+      <SubmitContainer>
+        <button className="add-button" onClick={handleAddOneRow}>Add One Row</button>
+        <SubmitButton onClick={handleValidateAndConfirm} disabled={loading}>Submit</SubmitButton>
+      </SubmitContainer>
+
+      <ToastContainer />
+
+      <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>
+        <DialogTitle>Confirm Purchase</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to start entering purchases for location
+            <strong> {selectedLocationName} </strong>?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirmDialog(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={() => {
+            setDate(dayjs());  // set today's date automatically, optional
+            setShowConfirmDialog(false);
+          }}
+            color="primary" variant="contained">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Shop selection confirmation dialog */}
+      <Dialog open={showShopConfirmDialog} onClose={() => setShowShopConfirmDialog(false)}>
+        <DialogTitle>Confirm Shop Selection</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingShop ? (
+              <span> You have selected '<strong>{pendingShop.label}</strong>'. Do you wish to continue?</span>
+            ) : (
+              'No shop selected.'
+            )}
+          </DialogContentText>
+          <div style={{ marginTop: 12 }}>
+            <Autocomplete
+              options={shopAddresses}
+              getOptionLabel={(option) => option?.label || ''}
+              value={pendingShop}
+              onChange={(_, newValue) => setPendingShop(newValue)}
+              renderInput={(params) => (
+                <TextField {...params} label="Change Shop" variant="outlined" size="small" />
+              )}
+              sx={{ width: 360 }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            // No: keep dialog open so user can change selection inside dialog
+          }} color="secondary">
+            No
+          </Button>
+          <Button onClick={() => {
+            // Yes: accept pending shop
+            setShop(pendingShop);
+            setShowShopConfirmDialog(false);
+          }} color="primary" variant="contained">
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Submit confirmation dialog */}
+      <Dialog open={showSubmitDialog} onClose={() => setShowSubmitDialog(false)}>
+        <DialogTitle>Confirm Submit</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <span>You have selected '<strong>{shop?.label || ''}</strong>'. Do you wish to submit?</span>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            // Cancel submission
+            setShowSubmitDialog(false);
+            setSubmitData(null);
+          }} color="secondary">
+            No
+          </Button>
+          <Button onClick={async () => {
+            setShowSubmitDialog(false);
+            setShowChargesDialog(true);
+          }} color="primary" variant="contained">
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invoice-level charges dialog, shown only after the submit confirmation. */}
+      <Dialog
+        open={showChargesDialog}
+        onClose={() => !loading && setShowChargesDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Purchase Total</DialogTitle>
+        <DialogContent sx={{ overflowX: 'hidden' }}>
+          <DialogContentText>
+            Add any invoice-level charges before saving this purchase.
+          </DialogContentText>
+          <ChargeSummary>
+            <div className="charge-row">
+              <span className="summary-label">Total Amount</span>
+              <span className="summary-value">{lineSubtotal.toFixed(2)}</span>
+            </div>
+
+            <div className="charge-row">
+              <label htmlFor="sgst">SGST</label>
+              <input
+                id="sgst"
+                type="number"
+                min="0"
+                step="0.01"
+                value={charges.sgst}
+                onChange={(e) => setCharges(current => ({ ...current, sgst: e.target.value }))}
+              />
+            </div>
+
+            <div className="charge-row">
+              <label htmlFor="cgst">CGST</label>
+              <input
+                id="cgst"
+                type="number"
+                min="0"
+                step="0.01"
+                value={charges.cgst}
+                onChange={(e) => setCharges(current => ({ ...current, cgst: e.target.value }))}
+              />
+            </div>
+
+            <div className="charge-row">
+              <label htmlFor="freight">Freight</label>
+              <input
+                id="freight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={charges.freight}
+                onChange={(e) => setCharges(current => ({ ...current, freight: e.target.value }))}
+              />
+            </div>
+
+            {charges.otherCharges.map((charge, index) => (
+              <div className="charge-row other-charge-row" key={charge.id}>
+                <input
+                  aria-label="Other charge description"
+                  placeholder="Other charge"
+                  value={charge.label}
+                  onChange={(e) => setCharges(current => ({
+                    ...current,
+                    otherCharges: current.otherCharges.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, label: e.target.value } : item
+                    )
+                  }))}
+                />
+                <input
+                  aria-label="Other charge amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={charge.amount}
+                  onChange={(e) => setCharges(current => ({
+                    ...current,
+                    otherCharges: current.otherCharges.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, amount: e.target.value } : item
+                    )
+                  }))}
+                />
+                <Button
+                  color="error"
+                  size="small"
+                  onClick={() => setCharges(current => ({
+                    ...current,
+                    otherCharges: current.otherCharges.filter((_, itemIndex) => itemIndex !== index)
+                  }))}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              className="add-charge-button"
+              size="small"
+              onClick={() => setCharges(current => ({
+                ...current,
+                otherCharges: [...current.otherCharges, { id: Date.now(), label: '', amount: '' }]
+              }))}
+            >
+              + Add other charge
+            </Button>
+
+            <div className="charge-row grand-total-row">
+              <span className="grand-total">Grand Total</span>
+              {isGrandTotalEditing ? (
+                <input
+                  className="grand-total-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={charges.grandTotal === '' ? grandTotal.toFixed(2) : charges.grandTotal}
+                  onChange={(e) => setCharges(current => ({ ...current, grandTotal: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={() => setIsGrandTotalEditing(false)}
+                  autoFocus
+                  aria-label="Grand total"
+                />
+              ) : (
+                <span
+                  className="grand-total-value"
+                  tabIndex={0}
+                  onDoubleClick={startGrandTotalEditing}
+                  onFocus={startGrandTotalEditing}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') startGrandTotalEditing();
+                  }}
+                  role="button"
+                  aria-label="Edit grand total"
+                >
+                  {grandTotal.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </ChargeSummary>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowChargesDialog(false)} color="secondary" disabled={loading}>
+            Back
+          </Button>
+          <Button onClick={confirmSubmit} color="primary" variant="contained" disabled={loading}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+  };
+
+  export default Purchase;
